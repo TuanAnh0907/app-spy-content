@@ -18,7 +18,9 @@ class TangThuVienScraper extends BaseScraperService
     public function scrapeStory(string $url): ?array
     {
         $crawler = $this->fetch($url, 'story');
-        if (!$crawler) return null;
+        if (!$crawler) {
+            return null;
+        }
 
         try {
             $title = $crawler->filter('.story-title h1')->count()
@@ -41,7 +43,10 @@ class TangThuVienScraper extends BaseScraperService
 
             // Genres
             $genres = [];
-            $crawler->filter('.story-detail-info .genre a, .info a[href*="the-loai"]')->each(function ($node) use (&$genres) {
+            $crawler->filter('.story-detail-info .genre a, .info a[href*="the-loai"]')->each(function ($node) use (
+                &
+                $genres
+            ) {
                 $genres[] = trim($node->text());
             });
 
@@ -49,14 +54,14 @@ class TangThuVienScraper extends BaseScraperService
             $statusText = $crawler->filter('.story-detail-info .status, .info .text-primary')->count()
                 ? $crawler->filter('.story-detail-info .status, .info .text-primary')->first()->text('')
                 : '';
-            $status = str_contains(mb_strtolower($statusText), 'hoàn') ? 'completed' : 'ongoing';
+            $status     = str_contains(mb_strtolower($statusText), 'hoàn') ? 'completed' : 'ongoing';
 
             // source_id từ slug URL
             $path     = rtrim(parse_url($url, PHP_URL_PATH), '/');
             $sourceId = basename($path);
 
             // Lấy danh sách chương
-            $chapterUrls  = $this->parseChapterList($crawler, $url, $sourceId);
+            $chapterUrls   = $this->parseChapterList($crawler, $url, $sourceId);
             $totalChapters = count($chapterUrls);
 
             return [
@@ -74,7 +79,7 @@ class TangThuVienScraper extends BaseScraperService
             ];
 
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error("[{$this->source}] Parse story error: {$url} — " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error("[{$this->source}] Parse story error: {$url} — ".$e->getMessage());
             return null;
         }
     }
@@ -82,7 +87,9 @@ class TangThuVienScraper extends BaseScraperService
     public function scrapeChapter(string $url): ?array
     {
         $crawler = $this->fetch($url, 'chapter');
-        if (!$crawler) return null;
+        if (!$crawler) {
+            return null;
+        }
 
         try {
             $title = $crawler->filter('.chapter-title h2, .box-chap h3')->count()
@@ -113,7 +120,7 @@ class TangThuVienScraper extends BaseScraperService
             ];
 
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error("[{$this->source}] Parse chapter error: {$url} — " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error("[{$this->source}] Parse chapter error: {$url} — ".$e->getMessage());
             return null;
         }
     }
@@ -122,12 +129,18 @@ class TangThuVienScraper extends BaseScraperService
     {
         $url     = "{$this->baseUrl}/tong-hop?page={$page}";
         $crawler = $this->fetch($url, 'story');
-        if (!$crawler) return [];
+        if (!$crawler) {
+            return [];
+        }
 
         $urls = [];
-        $crawler->filter('.list-story .story-item a.story-name, .list-truyen .row h3.truyen-title a')->each(function ($node) use (&$urls) {
+        $crawler->filter('.list-story .story-item a.story-name, .list-truyen .row h3.truyen-title a')->each(function (
+            $node
+        ) use (&$urls) {
             $href = $node->attr('href');
-            if ($href) $urls[] = $href;
+            if ($href) {
+                $urls[] = $href;
+            }
         });
 
         return $urls;
@@ -142,7 +155,9 @@ class TangThuVienScraper extends BaseScraperService
         // Thử lấy từ trang hiện tại
         $crawler->filter('#list-chapter ul.list-chapter li a, .list-chapter li a')->each(function ($node) use (&$urls) {
             $href = $node->attr('href');
-            if ($href) $urls[] = rtrim($href, '/');
+            if ($href) {
+                $urls[] = rtrim($href, '/');
+            }
         });
 
         // Nếu có phân trang, lấy API chapter list (tangthuvien có endpoint riêng)
@@ -154,12 +169,14 @@ class TangThuVienScraper extends BaseScraperService
             });
 
             if ($storyId) {
-                $apiUrl    = "{$this->baseUrl}/doc-truyen/chapter-list?story_id={$storyId}&page=all";
+                $apiUrl     = "{$this->baseUrl}/doc-truyen/chapter-list?story_id={$storyId}&page=all";
                 $apiCrawler = $this->fetch($apiUrl, 'story');
                 if ($apiCrawler) {
                     $apiCrawler->filter('li a')->each(function ($node) use (&$urls) {
                         $href = $node->attr('href');
-                        if ($href) $urls[] = rtrim($href, '/');
+                        if ($href) {
+                            $urls[] = rtrim($href, '/');
+                        }
                     });
                 }
             }

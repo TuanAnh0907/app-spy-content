@@ -16,14 +16,14 @@ abstract class BaseScraperService
     public function __construct()
     {
         $this->http = new Client([
-            'timeout'         => (int) env('CRAWLER_TIMEOUT', 30),
+            'timeout'         => config('crawler.timeout'),
             'connect_timeout' => 10,
             'headers'         => [
-                'User-Agent' => env('CRAWLER_USER_AGENT', 'Mozilla/5.0'),
-                'Accept'     => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'User-Agent'      => config('crawler.user_agent'),
+                'Accept'          => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
                 'Accept-Language' => 'vi-VN,vi;q=0.9,en;q=0.8',
             ],
-            'verify' => false,
+            'verify'          => false,
         ]);
     }
 
@@ -33,25 +33,20 @@ abstract class BaseScraperService
      */
     protected function fetch(string $url, string $type = 'story'): ?Crawler
     {
-        $retries = (int) env('CRAWLER_RETRIES', 3);
-        $delay   = (int) env('CRAWLER_DELAY_MS', 500);
+        $retries   = config('crawler.retries');
+        $delay     = config('crawler.delay_ms');
         $startTime = microtime(true);
 
         for ($attempt = 1; $attempt <= $retries; $attempt++) {
             try {
-                // Rate-limit: nghỉ giữa các request
-                if ($attempt > 1) {
-                    usleep($delay * 1000 * $attempt);
-                }
+                // Rate-limit: sleep trước mỗi request (kể cả lần đầu)
+                usleep($delay * 1000 * $attempt);
 
                 $response = $this->http->get($url);
                 $html     = (string) $response->getBody();
                 $duration = (int) ((microtime(true) - $startTime) * 1000);
 
                 $this->log($type, $url, 'success', null, $response->getStatusCode(), $duration);
-
-                // Rate-limit sau mỗi request thành công
-                usleep($delay * 1000);
 
                 return new Crawler($html, $url);
 

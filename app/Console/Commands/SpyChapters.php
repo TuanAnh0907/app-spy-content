@@ -56,12 +56,15 @@ class SpyChapters extends Command
             $chapterUrls = array_values($chapterUrls);
         }
 
-        $this->info("📋 Tổng: " . count($chapterUrls) . " chương cần crawl");
+        $this->info("📋 Tổng: ".count($chapterUrls)." chương cần crawl");
 
-        $bar      = $this->output->createProgressBar(count($chapterUrls));
-        $success  = 0;
-        $skipped  = 0;
-        $failed   = 0;
+        $bar     = $this->output->createProgressBar(count($chapterUrls));
+        $success = 0;
+        $skipped = 0;
+        $failed  = 0;
+
+        $chapterDelay = config('crawler.delays.chapter_s');
+        $staleMinutes = config('crawler.stale_minutes');
 
         $bar->start();
 
@@ -71,16 +74,16 @@ class SpyChapters extends Command
 
             if (!$force) {
                 // Skip nếu đã processed, hoặc đang processing mà chưa stale
-                $staleMinutes = (int) env('CRAWLER_STALE_MINUTES', 60);
+                $staleMinutes = config('crawler.stale_minutes');
 
                 $shouldSkip = ScrapedChapter::where('scraped_story_id', $story->id)
                     ->where('chapter_number', $chapterNum)
                     ->where(function ($q) use ($staleMinutes) {
                         $q->where('process_status', 'processed')
-                          ->orWhere(function ($q2) use ($staleMinutes) {
-                              $q2->where('process_status', 'processing')
-                                 ->where('updated_at', '>=', now()->subMinutes($staleMinutes));
-                          });
+                            ->orWhere(function ($q2) use ($staleMinutes) {
+                                $q2->where('process_status', 'processing')
+                                    ->where('updated_at', '>=', now()->subMinutes($staleMinutes));
+                            });
                     })
                     ->exists();
 
@@ -115,6 +118,8 @@ class SpyChapters extends Command
             $chapter->writeContent($content);
 
             $success++;
+            // Sleep giữa các chương để tránh bị chặn
+            sleep($chapterDelay);
             $bar->advance();
         }
 
@@ -136,7 +141,7 @@ class SpyChapters extends Command
 
     private function getScraper(string $source): ?object
     {
-        return match($source) {
+        return match ($source) {
             'truyenfull'  => new TruyenFullScraper(),
             'tangthuvien' => new TangThuVienScraper(),
             'sstruyen'    => new SSTruyenScraper(),

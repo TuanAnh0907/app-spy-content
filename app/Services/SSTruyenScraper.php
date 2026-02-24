@@ -17,7 +17,9 @@ class SSTruyenScraper extends BaseScraperService
     public function scrapeStory(string $url): ?array
     {
         $crawler = $this->fetch($url, 'story');
-        if (!$crawler) return null;
+        if (!$crawler) {
+            return null;
+        }
 
         try {
             $title = $crawler->filter('h1.name-title, .book h1')->count()
@@ -46,7 +48,7 @@ class SSTruyenScraper extends BaseScraperService
             $statusText = $crawler->filter('.info .text-success, .info .text-primary, .info .status')->count()
                 ? $crawler->filter('.info .text-success, .info .text-primary, .info .status')->first()->text('')
                 : '';
-            $status = str_contains(mb_strtolower($statusText), 'hoàn') ? 'completed' : 'ongoing';
+            $status     = str_contains(mb_strtolower($statusText), 'hoàn') ? 'completed' : 'ongoing';
 
             // source_id từ slug
             $path     = rtrim(parse_url($url, PHP_URL_PATH), '/');
@@ -72,7 +74,7 @@ class SSTruyenScraper extends BaseScraperService
             ];
 
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error("[{$this->source}] Parse story error: {$url} — " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error("[{$this->source}] Parse story error: {$url} — ".$e->getMessage());
             return null;
         }
     }
@@ -80,7 +82,9 @@ class SSTruyenScraper extends BaseScraperService
     public function scrapeChapter(string $url): ?array
     {
         $crawler = $this->fetch($url, 'chapter');
-        if (!$crawler) return null;
+        if (!$crawler) {
+            return null;
+        }
 
         try {
             $title = $crawler->filter('.chapter-title, h2.title-chuong')->count()
@@ -107,7 +111,7 @@ class SSTruyenScraper extends BaseScraperService
             ];
 
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error("[{$this->source}] Parse chapter error: {$url} — " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error("[{$this->source}] Parse chapter error: {$url} — ".$e->getMessage());
             return null;
         }
     }
@@ -116,12 +120,19 @@ class SSTruyenScraper extends BaseScraperService
     {
         $url     = "{$this->baseUrl}/truyen-moi-cap-nhat/trang-{$page}/";
         $crawler = $this->fetch($url, 'story');
-        if (!$crawler) return [];
+        if (!$crawler) {
+            return [];
+        }
 
         $urls = [];
-        $crawler->filter('.list-truyen .row h3.truyen-title a, .list-story .story-item h3 a')->each(function ($node) use (&$urls) {
+        $crawler->filter('.list-truyen .row h3.truyen-title a, .list-story .story-item h3 a')->each(function ($node) use
+        (
+            &$urls
+        ) {
             $href = $node->attr('href');
-            if ($href) $urls[] = $href;
+            if ($href) {
+                $urls[] = $href;
+            }
         });
 
         return $urls;
@@ -135,7 +146,9 @@ class SSTruyenScraper extends BaseScraperService
 
         $crawler->filter('#list-chapter ul.list-chapter li a, .list-chapter li a')->each(function ($node) use (&$urls) {
             $href = $node->attr('href');
-            if ($href) $urls[] = rtrim($href, '/');
+            if ($href) {
+                $urls[] = rtrim($href, '/');
+            }
         });
 
         // Phân trang chương
@@ -149,10 +162,14 @@ class SSTruyenScraper extends BaseScraperService
 
         foreach ($pages as $pageUrl) {
             $pageCrawler = $this->fetch($pageUrl, 'story');
-            if (!$pageCrawler) continue;
+            if (!$pageCrawler) {
+                continue;
+            }
             $pageCrawler->filter('#list-chapter ul.list-chapter li a')->each(function ($node) use (&$urls) {
                 $href = $node->attr('href');
-                if ($href) $urls[] = rtrim($href, '/');
+                if ($href) {
+                    $urls[] = rtrim($href, '/');
+                }
             });
         }
 

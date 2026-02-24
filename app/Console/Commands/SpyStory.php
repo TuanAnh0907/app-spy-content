@@ -62,18 +62,20 @@ class SpyStory extends Command
         );
 
         $this->info("✅ Đã lưu: [{$story->id}] {$story->title}");
-        $this->line("   Tác giả   : " . ($story->author ?? 'N/A'));
-        $this->line("   Thể loại  : " . implode(', ', $story->genres ?? []));
+        $this->line("   Tác giả   : ".($story->author ?? 'N/A'));
+        $this->line("   Thể loại  : ".implode(', ', $story->genres ?? []));
         $this->line("   Tổng chương: {$story->total_chapters}");
-        $this->line("   URLs chương: " . count($chapterUrls));
+        $this->line("   URLs chương: ".count($chapterUrls));
 
         // Crawl chương ngay nếu có --chapters
         if ($this->option('chapters') && !empty($chapterUrls)) {
-            $this->info("📖 Bắt đầu crawl " . count($chapterUrls) . " chương...");
+            $this->info("📖 Bắt đầu crawl ".count($chapterUrls)." chương...");
             $this->crawlChapters($story, $chapterUrls, $scraper);
-        } else if (!empty($chapterUrls)) {
-            $this->line("\n💡 Chạy lệnh sau để crawl chương:");
-            $this->line("   php artisan spy:chapters {$story->id}");
+        } else {
+            if (!empty($chapterUrls)) {
+                $this->line("\n💡 Chạy lệnh sau để crawl chương:");
+                $this->line("   php artisan spy:chapters {$story->id}");
+            }
         }
 
         return self::SUCCESS;
@@ -81,26 +83,36 @@ class SpyStory extends Command
 
     private function crawlChapters(ScrapedStory $story, array $chapterUrls, $scraper): void
     {
-        $bar = $this->output->createProgressBar(count($chapterUrls));
+        $chapterDelay = config('crawler.delays.chapter_s');
+        $bar          = $this->output->createProgressBar(count($chapterUrls));
         $bar->start();
 
         foreach ($chapterUrls as $chapterUrl) {
+            preg_match('/chuong-(\d+)/i', $chapterUrl, $m);
+            $chapterNum = (int) ($m[1] ?? 0);
+
+            // Đánh dấu đang xử lý
+            $chapter = \App\Models\ScrapedChapter::updateOrCreate(
+                ['scraped_story_id' => $story->id, 'chapter_number' => $chapterNum],
+                ['source_url' => $chapterUrl, 'process_status' => 'processing']
+            );
+
             $data = $scraper->scrapeChapter($chapterUrl);
             if (!$data) {
+                $chapter->update(['process_status' => 'failed', 'process_note' => 'scrapeChapter() trả về null']);
                 $bar->advance();
+                sleep($chapterDelay);
                 continue;
             }
 
             $content = $data['content'] ?? '';
             unset($data['content']);
 
-            $chapter = \App\Models\ScrapedChapter::updateOrCreate(
-                ['scraped_story_id' => $story->id, 'chapter_number' => $data['chapter_number']],
-                $data
-            );
-
+            $chapter->update(array_merge($data, ['process_status' => 'processed', 'process_note' => null]));
             $chapter->writeContent($content);
             $story->increment('scraped_chapters');
+
+            sleep($chapterDelay);
             $bar->advance();
         }
 
@@ -111,7 +123,7 @@ class SpyStory extends Command
 
     private function getScraper(string $source): ?object
     {
-        return match($source) {
+        return match ($source) {
             'truyenfull'  => new TruyenFullScraper(),
             'tangthuvien' => new TangThuVienScraper(),
             'sstruyen'    => new SSTruyenScraper(),

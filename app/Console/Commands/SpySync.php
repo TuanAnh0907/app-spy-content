@@ -25,8 +25,8 @@ class SpySync extends Command
     {
         parent::__construct();
 
-        $this->apiBase  = rtrim(env('BACKEND_API_URL', 'http://localhost:8000'), '/');
-        $this->apiToken = env('BACKEND_API_TOKEN', '');
+        $this->apiBase  = rtrim(config('services.backend_api.url'), '/');
+        $this->apiToken = config('services.backend_api.token');
 
         $this->http = new Client([
             'base_uri' => $this->apiBase,
@@ -49,7 +49,7 @@ class SpySync extends Command
 
         // Lấy danh sách truyện cần sync
         $query = ScrapedStory::where('process_status', 'processed')
-                              ->where('is_synced', false);
+            ->where('is_synced', false);
 
         if ($storyId = $this->option('story')) {
             $query->where('id', $storyId);
@@ -84,7 +84,9 @@ class SpySync extends Command
                 $chapterSuccess = 0;
                 foreach ($chapters as $chapter) {
                     $chapterResult = $this->syncChapter($story, $chapter, $result['story_id'], $dryRun);
-                    if ($chapterResult) $chapterSuccess++;
+                    if ($chapterResult) {
+                        $chapterSuccess++;
+                    }
                 }
 
                 $this->info("  ✅ Chapters synced: {$chapterSuccess}/{$chapters->count()}");
@@ -114,7 +116,7 @@ class SpySync extends Command
         ];
 
         if ($dryRun) {
-            $this->line('    Payload: ' . json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+            $this->line('    Payload: '.json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
             return ['story_id' => 0];
         }
 
@@ -123,7 +125,7 @@ class SpySync extends Command
                 'json' => $payload,
             ]);
 
-            $body = json_decode($response->getBody(), true);
+            $body           = json_decode($response->getBody(), true);
             $backendStoryId = $body['data']['id'] ?? null;
 
             if (!$backendStoryId) {
@@ -141,7 +143,7 @@ class SpySync extends Command
             return ['story_id' => $backendStoryId];
 
         } catch (RequestException $e) {
-            $this->error('  HTTP error: ' . $e->getMessage());
+            $this->error('  HTTP error: '.$e->getMessage());
             return null;
         }
     }
@@ -165,7 +167,7 @@ class SpySync extends Command
                 'json' => $payload,
             ]);
 
-            $body = json_decode($response->getBody(), true);
+            $body             = json_decode($response->getBody(), true);
             $backendChapterId = $body['data']['id'] ?? null;
 
             $chapter->update([
@@ -177,7 +179,7 @@ class SpySync extends Command
             return true;
 
         } catch (RequestException $e) {
-            $this->warn("    ⚠️ Chapter {$chapter->chapter_number} failed: " . $e->getMessage());
+            $this->warn("    ⚠️ Chapter {$chapter->chapter_number} failed: ".$e->getMessage());
             return false;
         }
     }

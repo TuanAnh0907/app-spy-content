@@ -8,7 +8,7 @@ use Symfony\Component\DomCrawler\Crawler;
 
 class TruyenFullScraper extends BaseScraperService
 {
-    protected string $source = 'truyenfull';
+    protected string $source  = 'truyenfull';
     protected string $baseUrl = 'https://truyenfull.io';
 
     /**
@@ -18,7 +18,9 @@ class TruyenFullScraper extends BaseScraperService
     public function scrapeStory(string $url): ?array
     {
         $crawler = $this->fetch($url, 'story');
-        if (!$crawler) return null;
+        if (!$crawler) {
+            return null;
+        }
 
         try {
             $title       = $crawler->filter('.book h3.title')->first()->text('');
@@ -37,7 +39,7 @@ class TruyenFullScraper extends BaseScraperService
             $statusText = $crawler->filter('.info .text-primary')->count()
                 ? $crawler->filter('.info .text-primary')->first()->text('')
                 : 'Đang ra';
-            $status = str_contains(mb_strtolower($statusText), 'hoàn') ? 'completed' : 'ongoing';
+            $status     = str_contains(mb_strtolower($statusText), 'hoàn') ? 'completed' : 'ongoing';
 
             // Cover URL (lưu để xử lý sau)
             $coverUrl = $crawler->filter('.book img')->count()
@@ -69,7 +71,7 @@ class TruyenFullScraper extends BaseScraperService
             ];
 
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error("[{$this->source}] Parse story error: {$url} — " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error("[{$this->source}] Parse story error: {$url} — ".$e->getMessage());
             return null;
         }
     }
@@ -81,7 +83,9 @@ class TruyenFullScraper extends BaseScraperService
     public function scrapeChapter(string $url): ?array
     {
         $crawler = $this->fetch($url, 'chapter');
-        if (!$crawler) return null;
+        if (!$crawler) {
+            return null;
+        }
 
         try {
             $title = $crawler->filter('.chapter-title')->count()
@@ -113,7 +117,7 @@ class TruyenFullScraper extends BaseScraperService
             ];
 
         } catch (\Throwable $e) {
-            \Illuminate\Support\Facades\Log::error("[{$this->source}] Parse chapter error: {$url} — " . $e->getMessage());
+            \Illuminate\Support\Facades\Log::error("[{$this->source}] Parse chapter error: {$url} — ".$e->getMessage());
             return null;
         }
     }
@@ -125,12 +129,16 @@ class TruyenFullScraper extends BaseScraperService
     {
         $url     = "{$this->baseUrl}/danh-sach/truyen-moi/trang-{$page}/";
         $crawler = $this->fetch($url, 'story');
-        if (!$crawler) return [];
+        if (!$crawler) {
+            return [];
+        }
 
         $urls = [];
         $crawler->filter('.list-truyen .row h3.truyen-title a')->each(function ($node) use (&$urls) {
             $href = $node->attr('href');
-            if ($href) $urls[] = $href;
+            if ($href) {
+                $urls[] = $href;
+            }
         });
 
         return $urls;
@@ -155,13 +163,17 @@ class TruyenFullScraper extends BaseScraperService
         }
 
         // Lấy trang cuối để đếm chương cuối cùng
-        $slug         = rtrim(parse_url($storyUrl, PHP_URL_PATH), '/');
-        $lastPageUrl  = "{$this->baseUrl}{$slug}/trang-{$lastPage}/#list-chapter";
-        $lastCrawler  = $this->fetch($lastPageUrl, 'story');
-        if (!$lastCrawler) return 0;
+        $slug        = rtrim(parse_url($storyUrl, PHP_URL_PATH), '/');
+        $lastPageUrl = "{$this->baseUrl}{$slug}/trang-{$lastPage}/#list-chapter";
+        $lastCrawler = $this->fetch($lastPageUrl, 'story');
+        if (!$lastCrawler) {
+            return 0;
+        }
 
         $lastChapterLink = $lastCrawler->filter('#list-chapter ul.list-chapter li')->last();
-        if (!$lastChapterLink->count()) return 0;
+        if (!$lastChapterLink->count()) {
+            return 0;
+        }
 
         $href = $lastChapterLink->filter('a')->attr('href');
         preg_match('/chuong-(\d+)/i', $href ?? '', $m);
@@ -174,7 +186,9 @@ class TruyenFullScraper extends BaseScraperService
         $urls = [];
         $crawler->filter('#list-chapter ul.list-chapter li a')->each(function ($node) use (&$urls) {
             $href = $node->attr('href');
-            if ($href) $urls[] = $href;
+            if ($href) {
+                $urls[] = $href;
+            }
         });
 
         // Lấy thêm các trang khác nếu có
@@ -188,10 +202,14 @@ class TruyenFullScraper extends BaseScraperService
 
         foreach ($pages as $pageNum => $pageUrl) {
             $pageCrawler = $this->fetch($pageUrl, 'story');
-            if (!$pageCrawler) continue;
+            if (!$pageCrawler) {
+                continue;
+            }
             $pageCrawler->filter('#list-chapter ul.list-chapter li a')->each(function ($node) use (&$urls) {
                 $href = $node->attr('href');
-                if ($href) $urls[] = $href;
+                if ($href) {
+                    $urls[] = $href;
+                }
             });
         }
 

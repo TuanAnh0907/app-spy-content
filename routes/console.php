@@ -23,21 +23,18 @@ Artisan::command('inspire', function () {
 Schedule::command('spy:run truyenfull --pages=1 --limit=5')
     ->everySixHours()
     ->withoutOverlapping(120)   // lock 2 giờ
-    ->timeout(7200)
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/spy-run-truyenfull.log'));
 
 Schedule::command('spy:run tangthuvien --pages=1 --limit=5')
     ->everySixHours()
     ->withoutOverlapping(120)
-    ->timeout(7200)
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/spy-run-tangthuvien.log'));
 
 Schedule::command('spy:run sstruyen --pages=1 --limit=5')
     ->everySixHours()
     ->withoutOverlapping(120)
-    ->timeout(7200)
     ->runInBackground()
     ->appendOutputTo(storage_path('logs/spy-run-sstruyen.log'));
 
@@ -45,5 +42,4 @@ Schedule::command('spy:run sstruyen --pages=1 --limit=5')
 Schedule::command('spy:sync --all')
     ->hourly()
     ->withoutOverlapping(5)
-    ->timeout(120)
     ->appendOutputTo(storage_path('logs/spy-sync.log'));

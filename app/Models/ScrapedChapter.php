@@ -23,8 +23,8 @@ class ScrapedChapter extends Model
     ];
 
     protected $casts = [
-        'is_synced'  => 'boolean',
-        'synced_at'  => 'datetime',
+        'is_synced' => 'boolean',
+        'synced_at' => 'datetime',
     ];
 
     public function story(): BelongsTo

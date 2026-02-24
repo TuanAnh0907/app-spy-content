@@ -21,9 +21,9 @@ class SpyRun extends Command
 
     public function handle(): int
     {
-        $source  = $this->argument('source');
-        $limit   = (int) $this->option('limit');
-        $pages   = (int) $this->option('pages');
+        $source = $this->argument('source');
+        $limit  = (int) $this->option('limit');
+        $pages  = (int) $this->option('pages');
 
         $this->info("🚀 Bắt đầu crawl hàng loạt từ: {$source}");
         $this->line("   Limit: {$limit} truyện | Quét {$pages} trang danh sách");
@@ -35,7 +35,7 @@ class SpyRun extends Command
         }
 
         // Sleep giữa các story (giây) — ngoài delay per-request đã có trong BaseScraperService
-        $storyDelay = (int) env('CRAWLER_STORY_DELAY_S', 20);
+        $storyDelay = config('crawler.delays.story_s');
 
         // Thu thập URLs từ các trang danh sách
         $storyUrls = [];
@@ -47,16 +47,16 @@ class SpyRun extends Command
         $storyUrls = array_values(array_unique($storyUrls));
 
         // Skip: đã processed, hoặc đang processing mà chưa stale
-        // Processing quá CRAWLER_STALE_MINUTES phút (job trước crash) thì crawl lại
-        $staleMinutes = (int) env('CRAWLER_STALE_MINUTES', 60);
+        // Processing quá phút cấu hình (job trước crash) thì crawl lại
+        $staleMinutes = config('crawler.stale_minutes');
 
         $skipUrls = ScrapedStory::where('source', $source)
             ->where(function ($q) use ($staleMinutes) {
                 $q->where('process_status', 'processed')
-                  ->orWhere(function ($q2) use ($staleMinutes) {
-                      $q2->where('process_status', 'processing')
-                         ->where('updated_at', '>=', now()->subMinutes($staleMinutes));
-                  });
+                    ->orWhere(function ($q2) use ($staleMinutes) {
+                        $q2->where('process_status', 'processing')
+                            ->where('updated_at', '>=', now()->subMinutes($staleMinutes));
+                    });
             })
             ->pluck('source_url')
             ->toArray();
@@ -69,7 +69,7 @@ class SpyRun extends Command
             return self::SUCCESS;
         }
 
-        $this->info("🕷️  Bắt đầu crawl " . count($storyUrls) . " truyện...");
+        $this->info("🕷️  Bắt đầu crawl ".count($storyUrls)." truyện...");
         $bar = $this->output->createProgressBar(count($storyUrls));
         $bar->start();
 
@@ -114,6 +114,8 @@ class SpyRun extends Command
             // Crawl chương nếu yêu cầu
             if ($this->option('chapters') && !empty($chapterUrls)) {
                 $chapterSuccess = 0;
+                $chapterDelay   = config('crawler.delays.chapter_s');
+
                 foreach ($chapterUrls as $chapterUrl) {
                     $chapterData = $scraper->scrapeChapter($chapterUrl);
 
@@ -126,16 +128,22 @@ class SpyRun extends Command
                     );
 
                     if (!$chapterData) {
-                        $chapterRecord->update(['process_status' => 'failed', 'process_note' => 'scrapeChapter() trả về null']);
+                        $chapterRecord->update([
+                            'process_status' => 'failed', 'process_note' => 'scrapeChapter() trả về null'
+                        ]);
+                        sleep($chapterDelay);
                         continue;
                     }
 
                     $content = $chapterData['content'] ?? '';
                     unset($chapterData['content']);
 
-                    $chapterRecord->update(array_merge($chapterData, ['process_status' => 'processed', 'process_note' => null]));
+                    $chapterRecord->update(array_merge($chapterData,
+                        ['process_status' => 'processed', 'process_note' => null]));
                     $chapterRecord->writeContent($content);
                     $chapterSuccess++;
+
+                    sleep($chapterDelay);
                 }
 
                 $story->update(['scraped_chapters' => $chapterSuccess]);
@@ -161,7 +169,7 @@ class SpyRun extends Command
 
     private function getScraper(string $source): ?object
     {
-        return match($source) {
+        return match ($source) {
             'truyenfull'  => new TruyenFullScraper(),
             'tangthuvien' => new TangThuVienScraper(),
             'sstruyen'    => new SSTruyenScraper(),
