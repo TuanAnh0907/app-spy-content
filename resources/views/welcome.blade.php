@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ config('app.name') }} — Spy Service</title>
+    <title>{{ config('app.name') }} — Spyder Service</title>
     <style>
         * {
             margin: 0;
@@ -203,16 +203,12 @@
         <div class="icon-wrap">🕵️</div>
 
         <h1>{{ config('app.name') }}</h1>
-        <p class="subtitle">Spy & Crawler Service</p>
+        <p class="subtitle">Spyder & Crawler Service</p>
 
         <div class="info-grid">
             <div class="info-card">
                 <div class="info-label">Trạng thái</div>
                 <div class="info-value green">✓ Online</div>
-            </div>
-            <div class="info-card">
-                <div class="info-label">Môi trường</div>
-                <div class="info-value blue">{{ ucfirst(app()->environment()) }}</div>
             </div>
             <div class="info-card">
                 <div class="info-label">Laravel</div>
