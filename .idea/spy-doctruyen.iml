@@ -126,6 +126,13 @@
       <excludeFolder url="file://$MODULE_DIR$/vendor/tijsverkoyen/css-to-inline-styles" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/vlucas/phpdotenv" />
       <excludeFolder url="file://$MODULE_DIR$/vendor/voku/portable-ascii" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/bensampo/laravel-enum" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/laminas/laminas-code" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/nicmart/tree" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/spatie/browsershot" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/spatie/crawler" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/spatie/robots-txt" />
+      <excludeFolder url="file://$MODULE_DIR$/vendor/spatie/temporary-directory" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
