@@ -36,7 +36,7 @@ class CrawlDtruyenCommand extends Command
 
             try {
                 // Dùng custom Stealth NodeJS thay vì Browsershot để 100% qua mặt Cloudflare
-                $nodeCmd = "node " . base_path('scraper.cjs') . " " . escapeshellarg($job->url);
+                $nodeCmd = "cd /var/www/read-app/spy-doctruyen && node /var/www/read-app/spy-doctruyen/scraper.cjs " . escapeshellarg($job->url);
                 $html = shell_exec($nodeCmd);
 
                 if (!$html || strlen(trim($html)) < 1000) {
