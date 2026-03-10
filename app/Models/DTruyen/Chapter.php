@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\DTruyen;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,11 +17,12 @@ use Illuminate\Support\Carbon;
  * @property string|null $last_error
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
- * @property-read DtruyenStory $story
+ *
+ * @property-read Story $story
  */
-class ScrapedChapter extends Model
+class Chapter extends Model
 {
-    // use HasFactory; // Factory chưa được định nghĩa, tạm thời bỏ để tránh warning
+    protected $table = 'scraped_chapters';
 
     protected $fillable = [
         'story_id',
@@ -42,6 +43,6 @@ class ScrapedChapter extends Model
 
     public function story(): BelongsTo
     {
-        return $this->belongsTo(DtruyenStory::class, 'story_id');
+        return $this->belongsTo(Story::class, 'story_id');
     }
 }

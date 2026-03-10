@@ -2,28 +2,20 @@
 
 namespace App\Services\Crawler\Observers;
 
-use App\Models\TtvStory;
-use App\Enums\TtvStoryType;
-use DOMDocument;
-use DOMXPath;
+use App\Models\DTruyen\Story;
+use App\Enums\DtruyenStoryType;
 use GuzzleHttp\Exception\RequestException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 use Spatie\Crawler\CrawlObservers\CrawlObserver;
 
-class TtvCrawlObserver extends CrawlObserver
+class DtruyenCrawlObserver extends CrawlObserver
 {
-    /**
-     * Called when the crawler will crawl the url.
-     */
     public function willCrawl(UriInterface $url, ?string $linkText): void
     {
         // echo "Crawling: " . (string) $url . "\n";
     }
 
-    /**
-     * Called when the crawler has crawled the given url successfully.
-     */
     public function crawled(
         UriInterface $url,
         ResponseInterface $response,
@@ -37,17 +29,14 @@ class TtvCrawlObserver extends CrawlObserver
             $storyUrl = rtrim($urlString, '/');
 
             if (empty($url->getQuery())) {
-                TtvStory::firstOrCreate(
+                Story::firstOrCreate(
                     ['url' => $storyUrl],
-                    ['type' => TtvStoryType::TRANSLATED] 
+                    ['type' => DtruyenStoryType::TRANSLATED]
                 );
             }
         }
     }
 
-    /**
-     * Called when the crawler had a problem crawling the given url.
-     */
     public function crawlFailed(
         UriInterface $url,
         RequestException $requestException,

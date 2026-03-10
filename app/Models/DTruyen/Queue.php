@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\DTruyen;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -13,14 +13,14 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-class DtruyenQueue extends Model
+class Queue extends Model
 {
     protected $table = 'dtruyen_queues';
 
     protected $fillable = [
         'url',
         'status',
-        'last_error'
+        'last_error',
     ];
 
     protected $casts = [

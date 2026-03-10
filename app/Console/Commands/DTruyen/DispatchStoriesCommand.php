@@ -1,22 +1,24 @@
 <?php
 
-namespace App\Console\Commands;
+namespace App\Console\Commands\DTruyen;
 
-use App\Jobs\ProcessDtruyenStoryJob;
-use App\Models\DtruyenStory;
+use App\Jobs\DTruyen\ProcessStoryJob;
+use App\Models\DTruyen\Story;
 use Illuminate\Console\Command;
 
-class DispatchStoryJobsCommand extends Command
+/**
+ * Command Thread 2: Dispatch ProcessStoryJob cho các truyện pending trong dtruyen_stories.
+ */
+class DispatchStoriesCommand extends Command
 {
-    protected $signature = 'crawl:dispatch-stories {--limit=100 : Số truyện mỗi lần dispatch}';
-
-    protected $description = 'Dispatch ProcessDtruyenStoryJob cho các truyện đang pending trong bảng dtruyen_stories (Thread 2)';
+    protected $signature   = 'crawl:dispatch-stories {--limit=100 : Số truyện mỗi lần dispatch}';
+    protected $description = 'Thread 2 - Dispatch job xử lý từng truyện pending trong dtruyen_stories';
 
     public function handle(): void
     {
         $limit = (int) $this->option('limit');
 
-        $stories = DtruyenStory::query()
+        $stories = Story::query()
             ->where('status', 'pending')
             ->orderBy('id')
             ->limit($limit)
@@ -34,12 +36,12 @@ class DispatchStoryJobsCommand extends Command
 
         foreach ($stories as $story) {
             $story->update(['status' => 'processing']);
-            ProcessDtruyenStoryJob::dispatch($story)->onQueue('stories');
+            ProcessStoryJob::dispatch($story)->onQueue('stories');
             $bar->advance();
         }
 
         $bar->finish();
         $this->newLine();
-        $this->info('✅ Đã dispatch xong! Chạy "php artisan queue:work --queue=stories,chapters" để bắt đầu Thread 2.');
+        $this->info('✅ Dispatch xong! Chạy "php artisan queue:work --queue=stories,chapters" để bắt đầu Thread 2.');
     }
 }

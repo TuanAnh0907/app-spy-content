@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Jobs;
+namespace App\Jobs\DTruyen;
 
-use App\Models\DtruyenStory;
-use App\Models\ScrapedChapter;
+use App\Models\DTruyen\Chapter;
+use App\Models\DTruyen\Story;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -17,17 +17,17 @@ use DOMXPath;
 
 /**
  * Job xử lý 1 bộ truyện từ bảng dtruyen_stories (Thread 2).
- * Chỉ crawl trang 1 của danh sách chương, sau đó dispatch
- * CrawlChapterPageJob cho các trang còn lại để tránh timeout.
+ * Cào trang 1 danh sách chương, lấy metadata, tạo thư mục lưu trữ,
+ * sau đó dispatch CrawlChapterPageJob cho các trang phân trang còn lại.
  */
-class ProcessDtruyenStoryJob implements ShouldQueue
+class ProcessStoryJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries   = 3;
     public int $timeout = 120;
 
-    public function __construct(public DtruyenStory $story)
+    public function __construct(public Story $story)
     {
     }
 
@@ -53,18 +53,17 @@ class ProcessDtruyenStoryJob implements ShouldQueue
             $this->dispatchSubsequentPages($maxPage);
 
             if ($maxPage === 1) {
-                // Ta có thể đếm số lượng chapters trong DB, hoặc mạo muội completed luôn
-                $totalCount = ScrapedChapter::query()
+                $totalCount = Chapter::query()
                     ->where('story_id', $this->story->id)
                     ->count();
 
                 $this->story->update(['status' => 'completed', 'total_chapters' => $totalCount]);
             }
 
-            Log::info("[ProcessDtruyenStoryJob] '{$this->story->title}' -> {$maxPage} trang chương, dispatch thêm ".($maxPage - 1)." Job trang.");
+            Log::info("[DTruyen][ProcessStoryJob] '{$this->story->title}' -> {$maxPage} trang chương, dispatch thêm " . ($maxPage - 1) . " Job trang.");
 
         } catch (Exception $e) {
-            Log::error("[ProcessDtruyenStoryJob] Lỗi: ".$e->getMessage());
+            Log::error("[DTruyen][ProcessStoryJob] Lỗi: " . $e->getMessage());
             $this->story->update(['status' => 'failed', 'last_error' => $e->getMessage()]);
             throw $e;
         }
@@ -76,7 +75,7 @@ class ProcessDtruyenStoryJob implements ShouldQueue
     protected function fetchStoryHtml(string $url): string
     {
         $scraperPath = base_path('scraper.cjs');
-        $html        = shell_exec("cd ".escapeshellarg(base_path())." && node ".escapeshellarg($scraperPath)." ".escapeshellarg($url));
+        $html        = shell_exec("cd " . escapeshellarg(base_path()) . " && node " . escapeshellarg($scraperPath) . " " . escapeshellarg($url));
 
         if (!$html || strlen(trim($html)) < 500) {
             throw new Exception("HTML rỗng hoặc bị block: {$url}");
@@ -129,10 +128,10 @@ class ProcessDtruyenStoryJob implements ShouldQueue
     protected function dispatchSubsequentPages(int $maxPage): void
     {
         for ($page = 2; $page <= $maxPage; $page++) {
-            $pageUrl = rtrim($this->story->url, '/')."/trang-{$page}/#chapter-list";
+            $pageUrl = rtrim($this->story->url, '/') . "/trang-{$page}/#chapter-list";
             CrawlChapterPageJob::dispatch($this->story, $pageUrl)
                 ->onQueue('stories')
-                ->delay(now()->addSeconds(($page - 1) * 30)); // 30s giữa mỗi trang chapter
+                ->delay(now()->addSeconds(($page - 1) * 30));
         }
     }
 
@@ -146,7 +145,7 @@ class ProcessDtruyenStoryJob implements ShouldQueue
                 continue;
             }
 
-            $chapterUrl   = str_starts_with($href, 'http') ? $href : 'https://truyencom.com'.$href;
+            $chapterUrl   = str_starts_with($href, 'http') ? $href : 'https://truyencom.com' . $href;
             $chapterUrl   = rtrim($chapterUrl, '/');
             $chapterTitle = trim($link->textContent);
 
@@ -158,7 +157,7 @@ class ProcessDtruyenStoryJob implements ShouldQueue
                 $orderIndex = (int) $m[1];
             }
 
-            $chapter = ScrapedChapter::firstOrCreate(
+            $chapter = Chapter::firstOrCreate(
                 ['chapter_url' => $chapterUrl],
                 [
                     'story_id'      => $storyId,

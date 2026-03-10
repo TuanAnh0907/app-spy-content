@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Models;
+namespace App\Models\DTruyen;
 
+use App\Enums\DtruyenStoryType;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use App\Enums\DtruyenStoryType;
-use Illuminate\Support\Carbon;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 /**
  * @property int $id
@@ -21,9 +21,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  *
- * @property-read Collection|ScrapedChapter[] $scrapedChapters
+ * @property-read Collection|Chapter[] $chapters
  */
-class DtruyenStory extends Model
+class Story extends Model
 {
     protected $table = 'dtruyen_stories';
 
@@ -45,8 +45,8 @@ class DtruyenStory extends Model
         'updated_at'     => 'datetime',
     ];
 
-    public function scrapedChapters(): HasMany
+    public function chapters(): HasMany
     {
-        return $this->hasMany(ScrapedChapter::class, 'story_id');
+        return $this->hasMany(Chapter::class, 'story_id');
     }
 }
