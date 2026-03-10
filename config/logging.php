@@ -73,6 +73,30 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'dtruyen' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/dtruyen.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
+        'truyenfull' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/truyenfull.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
+        'sync' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/sync.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => env('LOG_DAILY_DAYS', 14),
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),

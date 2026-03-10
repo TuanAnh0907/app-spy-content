@@ -31,7 +31,7 @@ class CrawlChapterPageJob implements ShouldQueue
         $html        = shell_exec("cd " . escapeshellarg(base_path()) . " && node " . escapeshellarg($scraperPath) . " " . escapeshellarg($this->pageUrl));
 
         if (!$html || strlen(trim($html)) < 200) {
-            Log::warning("[DTruyen][CrawlChapterPageJob] HTML rỗng: {$this->pageUrl}");
+            Log::channel('dtruyen')->warning("[DTruyen][CrawlChapterPageJob] HTML rỗng: {$this->pageUrl}");
             return;
         }
 
@@ -43,6 +43,6 @@ class CrawlChapterPageJob implements ShouldQueue
 
         (new ProcessStoryJob($this->story))->extractAndSaveChapters($xpath, $this->story->id);
 
-        Log::info("[DTruyen][CrawlChapterPageJob] Đã crawl trang chương: {$this->pageUrl}");
+        Log::channel('dtruyen')->info("[DTruyen][CrawlChapterPageJob] Đã crawl trang chương: {$this->pageUrl}");
     }
 }

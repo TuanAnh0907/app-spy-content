@@ -62,7 +62,7 @@ class ProcessStoryJob implements ShouldQueue
                     'status'         => StoryStatus::SKIPPED,
                     'skipped_reason' => $reason,
                 ]);
-                Log::info("[TruyenFull][ProcessStoryJob] Skip '{$this->story->title}' — {$reason}");
+                Log::channel('truyenfull')->info("[TruyenFull][ProcessStoryJob] Skip '{$this->story->title}' — {$reason}");
                 return;
             }
             // ────────────────────────────────────────────────────────────────────
@@ -83,10 +83,10 @@ class ProcessStoryJob implements ShouldQueue
                 ]);
             }
 
-            Log::info("[TruyenFull][ProcessStoryJob] '{$this->story->title}' -> {$maxPage} trang chương.");
+            Log::channel('truyenfull')->info("[TruyenFull][ProcessStoryJob] '{$this->story->title}' -> {$maxPage} trang chương.");
 
         } catch (Exception $e) {
-            Log::error("[TruyenFull][ProcessStoryJob] Lỗi: " . $e->getMessage());
+            Log::channel('truyenfull')->error("[TruyenFull][ProcessStoryJob] Lỗi: " . $e->getMessage());
             $this->story->update(['status' => StoryStatus::FAILED, 'last_error' => $e->getMessage()]);
             throw $e;
         }
@@ -109,7 +109,7 @@ class ProcessStoryJob implements ShouldQueue
             }
 
             if ($i < $maxRetries) {
-                Log::warning("[TruyenFull][fetchHtml] Lần thử " . ($i+1) . " thất bại cho URL: {$url}. Đang thử lại sau 10s...");
+                Log::channel('truyenfull')->warning("[TruyenFull][fetchHtml] Lần thử " . ($i+1) . " thất bại cho URL: {$url}. Đang thử lại sau 10s...");
                 sleep(10);
             }
         }
@@ -155,11 +155,11 @@ class ProcessStoryJob implements ShouldQueue
         $pageLinks = $xpath->query('//ul[contains(@class,"pagination")]//a|//a[contains(@href, "/trang-")]|//a[contains(@href, "page=")]');
         $maxPage   = 1;
 
-        Log::info("[TruyenFull][ProcessStoryJob] Debug Pagination: found " . $pageLinks->length . " link nodes.");
+        Log::channel('truyenfull')->info("[TruyenFull][ProcessStoryJob] Debug Pagination: found " . $pageLinks->length . " link nodes.");
 
         foreach ($pageLinks as $link) {
             $href = (string) $link->getAttribute('href');
-            Log::debug("[TruyenFull][ProcessStoryJob] Pagination link detected: {$href}");
+            Log::channel('truyenfull')->debug("[TruyenFull][ProcessStoryJob] Pagination link detected: {$href}");
             if (preg_match('/page[=\-](\d+)/i', $href, $m) || preg_match('/trang-(\d+)/i', $href, $m)) {
                 $maxPage = max($maxPage, (int) $m[1]);
             }
@@ -187,7 +187,7 @@ class ProcessStoryJob implements ShouldQueue
         // TruyenFull: list chương nằm trong các thẻ <li> của .list-chapter
         $chapterLinks = $xpath->query('//ul[contains(@class,"list-chapter")]//li//a');
 
-        Log::info("[TruyenFull][ProcessStoryJob] Debug Chapters: found " . $chapterLinks->length . " links.");
+        Log::channel('truyenfull')->info("[TruyenFull][ProcessStoryJob] Debug Chapters: found " . $chapterLinks->length . " links.");
 
         foreach ($chapterLinks as $link) {
             $href = (string) $link->getAttribute('href');

@@ -62,7 +62,7 @@ class ProcessStoryJob implements ShouldQueue
                     'status'         => StoryStatus::SKIPPED,
                     'skipped_reason' => $reason,
                 ]);
-                Log::info("[DTruyen][ProcessStoryJob] Skip '{$this->story->title}' — {$reason}");
+                Log::channel('dtruyen')->info("[DTruyen][ProcessStoryJob] Skip '{$this->story->title}' — {$reason}");
                 return;
             }
             // ────────────────────────────────────────────────────────────────────
@@ -82,10 +82,10 @@ class ProcessStoryJob implements ShouldQueue
                 $this->story->update(['status' => StoryStatus::COMPLETED, 'total_chapters' => $totalCount]);
             }
 
-            Log::info("[DTruyen][ProcessStoryJob] '{$this->story->title}' -> {$maxPage} trang chương, dispatch thêm " . ($maxPage - 1) . " Job trang.");
+            Log::channel('dtruyen')->info("[DTruyen][ProcessStoryJob] '{$this->story->title}' -> {$maxPage} trang chương, dispatch thêm " . ($maxPage - 1) . " Job trang.");
 
         } catch (Exception $e) {
-            Log::error("[DTruyen][ProcessStoryJob] Lỗi: " . $e->getMessage());
+            Log::channel('dtruyen')->error("[DTruyen][ProcessStoryJob] Lỗi: " . $e->getMessage());
             $this->story->update(['status' => StoryStatus::FAILED, 'last_error' => $e->getMessage()]);
             throw $e;
         }

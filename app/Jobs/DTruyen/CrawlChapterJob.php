@@ -49,10 +49,10 @@ class CrawlChapterJob implements ShouldQueue
             // Sleep 30-60s sau khi cào xong để tránh bị block IP
             sleep(rand(30, 60));
 
-            Log::info("[DTruyen][CrawlChapterJob] Đã lưu chương: {$this->chapter->chapter_url}");
+            Log::channel('dtruyen')->info("[DTruyen][CrawlChapterJob] Đã lưu chương: {$this->chapter->chapter_url}");
 
         } catch (Exception $e) {
-            Log::error("[DTruyen][CrawlChapterJob] Lỗi chương {$this->chapter->chapter_url}: " . $e->getMessage());
+            Log::channel('dtruyen')->error("[DTruyen][CrawlChapterJob] Lỗi chương {$this->chapter->chapter_url}: " . $e->getMessage());
 
             $this->chapter->update([
                 'status'     => 'failed',

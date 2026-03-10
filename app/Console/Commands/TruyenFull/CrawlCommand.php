@@ -30,13 +30,19 @@ class CrawlCommand extends Command
     {
         $this->info('Starting TruyenFull Crawler (Thread 1)...');
 
-        // Seed URL gốc nếu queue trống
-        if (Queue::count() === 0) {
-            $this->info('Queue trống. Seed URL gốc truyenfull.vn...');
-            Queue::create(['url' => 'https://truyenfull.vn/', 'status' => 'pending']);
-        } else {
-            // Trả lại các link bị kẹt "processing" về "pending"
-            Queue::where('status', 'processing')->update(['status' => 'pending']);
+        // Trả lại các link bị kẹt "processing" về "pending"
+        Queue::where('status', 'processing')->update(['status' => 'pending']);
+
+        if (Queue::where('status', 'pending')->count() === 0) {
+            if (Queue::count() === 0) {
+                $this->info('Queue trống. Seed URL gốc truyenfull.vision...');
+                Queue::create(['url' => 'https://truyenfull.vision/', 'status' => 'pending']);
+            } else {
+                $this->info('Queue đã hết pending. Đợi 5 phút trước khi quét lại một vòng mới...');
+                sleep(300);
+                Queue::whereIn('status', ['completed', 'failed'])->update(['status' => 'pending']);
+                $this->info('Đã reset toàn bộ queue về pending để tìm truyện mới.');
+            }
         }
 
         while ($job = Queue::where('status', 'pending')->first()) {
@@ -44,14 +50,14 @@ class CrawlCommand extends Command
             $this->info("Crawling: {$job->url}");
 
             try {
-                $nodeCmd = "cd " . escapeshellarg(base_path()) . " && node " . escapeshellarg(base_path('scraper.cjs')) . " " . escapeshellarg($job->url);
+                $nodeCmd = "cd ".escapeshellarg(base_path())." && node ".escapeshellarg(base_path('scraper.cjs'))." ".escapeshellarg($job->url);
                 $html    = shell_exec($nodeCmd);
 
                 if (!$html || strlen(trim($html)) < 1000) {
-                    throw new \Exception("HTML rỗng hoặc bị Cloudflare chặn. Output: " . substr((string) $html, 0, 100));
+                    throw new \Exception("HTML rỗng hoặc bị Cloudflare chặn. Output: ".substr((string) $html, 0, 100));
                 }
 
-                $this->info("-> HTML length: " . strlen($html));
+                $this->info("-> HTML length: ".strlen($html));
                 $this->extractLinks($html);
 
                 $job->update(['status' => 'completed']);
@@ -61,7 +67,7 @@ class CrawlCommand extends Command
                 sleep($sleepTime);
 
             } catch (\Exception $e) {
-                $this->error("Lỗi {$job->url}: " . $e->getMessage());
+                $this->error("Lỗi {$job->url}: ".$e->getMessage());
                 $job->update(['status' => 'failed', 'last_error' => $e->getMessage()]);
             }
         }
@@ -84,7 +90,7 @@ class CrawlCommand extends Command
 
             // Chuẩn hóa URL tương đối → tuyệt đối
             if (str_starts_with($href, '/')) {
-                $href = 'https://' . ($parsed['host'] ?? 'truyenfull.vision') . $href;
+                $href = 'https://'.($parsed['host'] ?? 'truyenfull.vision').$href;
             }
 
             $parsed = parse_url($href);
@@ -94,9 +100,9 @@ class CrawlCommand extends Command
 
             $path     = $parsed['path'] ?? '/';
             $query    = $parsed['query'] ?? null;
-            $cleanUrl = rtrim($parsed['scheme'] . '://' . $parsed['host'] . $path, '/');
+            $cleanUrl = rtrim($parsed['scheme'].'://'.$parsed['host'].$path, '/');
             if ($query) {
-                $cleanUrl .= '?' . $query;
+                $cleanUrl .= '?'.$query;
             }
 
             // Nhận diện link truyện: /ten-truyen/ (slug ngắn, không chứa /chuong- hay /trang-)
