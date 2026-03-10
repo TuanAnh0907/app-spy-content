@@ -1,0 +1,56 @@
+apps:
+  # =====================================================
+  # [DTruyen] THREAD 1: Khám phá link từ truyencom.com
+  # =====================================================
+  - name: dtruyen-thread1-discovery
+    script: artisan
+    interpreter: php
+    args: "crawl:dtruyen"
+    cwd: /var/www/read-app/spy-doctruyen
+    autorestart: true
+    watch: false
+    max_restarts: 99999
+    restart_delay: 5000
+    log_date_format: "YYYY-MM-DD HH:mm:ss"
+    out_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-dtruyen-discovery-out.log
+    error_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-dtruyen-discovery-err.log
+    env:
+      APP_ENV: production
+
+  # =====================================================
+  # [DTruyen] THREAD 2a: Dispatcher – đẩy truyện vào Queue
+  # Chạy mỗi 5 phút
+  # =====================================================
+  - name: dtruyen-thread2-dispatcher
+    script: artisan
+    interpreter: php
+    args: "crawl:dispatch-stories --limit=20"
+    cwd: /var/www/read-app/spy-doctruyen
+    autorestart: true
+    watch: false
+    max_restarts: 99999
+    restart_delay: 300000
+    log_date_format: "YYYY-MM-DD HH:mm:ss"
+    out_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-dtruyen-dispatcher-out.log
+    error_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-dtruyen-dispatcher-err.log
+    env:
+      APP_ENV: production
+
+  # =====================================================
+  # [DTruyen] THREAD 2b: Queue Worker
+  # Queue: chapters (ưu tiên) → stories
+  # =====================================================
+  - name: dtruyen-thread2-worker
+    script: artisan
+    interpreter: php
+    args: "queue:work --queue=chapters,stories --timeout=300 --sleep=30 --tries=3"
+    cwd: /var/www/read-app/spy-doctruyen
+    autorestart: true
+    watch: false
+    max_restarts: 99999
+    restart_delay: 3000
+    log_date_format: "YYYY-MM-DD HH:mm:ss"
+    out_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-dtruyen-worker-out.log
+    error_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-dtruyen-worker-err.log
+    env:
+      APP_ENV: production

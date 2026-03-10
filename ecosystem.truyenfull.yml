@@ -1,0 +1,58 @@
+apps:
+  # =====================================================
+  # [TruyenFull] THREAD 1: Khám phá link truyện từ truyenfull.vn
+  # Crawl trang thể loại, phân trang → phát hiện URL truyện mới
+  # =====================================================
+  - name: tf-thread1-discovery
+    script: artisan
+    interpreter: php
+    args: "crawl:truyenfull"
+    cwd: /var/www/read-app/spy-doctruyen
+    autorestart: true
+    watch: false
+    max_restarts: 99999
+    restart_delay: 5000
+    log_date_format: "YYYY-MM-DD HH:mm:ss"
+    out_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-tf-discovery-out.log
+    error_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-tf-discovery-err.log
+    env:
+      APP_ENV: production
+
+  # =====================================================
+  # [TruyenFull] THREAD 2a: Dispatcher – đẩy truyện vào Queue
+  # Chạy mỗi 5 phút
+  # =====================================================
+  - name: tf-thread2-dispatcher
+    script: artisan
+    interpreter: php
+    args: "crawl:tf-dispatch-stories --limit=20"
+    cwd: /var/www/read-app/spy-doctruyen
+    autorestart: true
+    watch: false
+    max_restarts: 99999
+    restart_delay: 300000
+    log_date_format: "YYYY-MM-DD HH:mm:ss"
+    out_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-tf-dispatcher-out.log
+    error_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-tf-dispatcher-err.log
+    env:
+      APP_ENV: production
+
+  # =====================================================
+  # [TruyenFull] THREAD 2b: Queue Worker
+  # Queue: tf-chapters (ưu tiên) → tf-stories
+  # Chạy hoàn toàn độc lập với worker DTruyen
+  # =====================================================
+  - name: tf-thread2-worker
+    script: artisan
+    interpreter: php
+    args: "queue:work --queue=tf-chapters,tf-stories --timeout=300 --sleep=30 --tries=3"
+    cwd: /var/www/read-app/spy-doctruyen
+    autorestart: true
+    watch: false
+    max_restarts: 99999
+    restart_delay: 3000
+    log_date_format: "YYYY-MM-DD HH:mm:ss"
+    out_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-tf-worker-out.log
+    error_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-tf-worker-err.log
+    env:
+      APP_ENV: production

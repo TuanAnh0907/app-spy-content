@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Jobs\DTruyen;
+namespace App\Jobs\TruyenFull;
 
-use App\Models\DTruyen\Chapter;
+use App\Models\TruyenFull\Chapter;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -15,7 +15,7 @@ use DOMDocument;
 use DOMXPath;
 
 /**
- * Job cào nội dung text 1 chương từ truyencom.com, lưu vào file txt.
+ * Job cào nội dung text 1 chương từ TruyenFull, lưu vào file txt.
  * Được dispatch bởi ProcessStoryJob hoặc tái xử lý khi thất bại.
  */
 class CrawlChapterJob implements ShouldQueue
@@ -46,20 +46,20 @@ class CrawlChapterJob implements ShouldQueue
                 'last_error' => null,
             ]);
 
-            // Sleep 30-60s sau khi cào xong để tránh bị block IP
+            // Sleep 30-60s để tránh bị block IP
             sleep(rand(30, 60));
 
-            Log::info("[DTruyen][CrawlChapterJob] Đã lưu chương: {$this->chapter->chapter_url}");
+            Log::info("[TruyenFull][CrawlChapterJob] Đã lưu chương: {$this->chapter->chapter_url}");
 
         } catch (Exception $e) {
-            Log::error("[DTruyen][CrawlChapterJob] Lỗi chương {$this->chapter->chapter_url}: " . $e->getMessage());
+            Log::error("[TruyenFull][CrawlChapterJob] Lỗi chương {$this->chapter->chapter_url}: " . $e->getMessage());
 
             $this->chapter->update([
                 'status'     => 'failed',
                 'last_error' => $e->getMessage(),
             ]);
 
-            // Bắt buộc sleep kể cả khi bị lỗi/chặn để hạ nhiệt, tránh block IP nặng hơn
+            // Sleep dài hơn khi lỗi để hạ nhiệt tránh bị block thêm
             sleep(rand(60, 90));
 
             throw $e;
@@ -72,13 +72,23 @@ class CrawlChapterJob implements ShouldQueue
     protected function fetchHtml(string $url): string
     {
         $scraperPath = base_path('scraper.cjs');
-        $html        = shell_exec("cd " . escapeshellarg(base_path()) . " && node " . escapeshellarg($scraperPath) . " " . escapeshellarg($url));
+        $html        = '';
+        $maxRetries  = 2;
 
-        if (!$html || strlen(trim($html)) < 200) {
-            throw new Exception("HTML rỗng hoặc Cloudflare block khi cào chương: {$url}");
+        for ($i = 0; $i <= $maxRetries; $i++) {
+            $html = shell_exec("cd " . escapeshellarg(base_path()) . " && node " . escapeshellarg($scraperPath) . " " . escapeshellarg($url));
+
+            if ($html && strlen(trim($html)) >= 200) {
+                return $html;
+            }
+
+            if ($i < $maxRetries) {
+                Log::warning("[TruyenFull][CrawlChapterJob] Lần thử " . ($i+1) . " thất bại cho URL: {$url}. Đang thử lại sau 10s...");
+                sleep(10);
+            }
         }
 
-        return $html;
+        throw new Exception("HTML rỗng hoặc Cloudflare block sau {$maxRetries} lần thử: {$url}");
     }
 
     /**
@@ -91,13 +101,14 @@ class CrawlChapterJob implements ShouldQueue
         $dom->loadHTML($html);
         libxml_clear_errors();
 
-        $xpath   = new DOMXPath($dom);
+        $xpath = new DOMXPath($dom);
+
+        // TruyenFull để nội dung chương trong #chapter-c
         $queries = [
             '//*[@id="chapter-c"]',
             '//*[contains(@class,"chapter-c")]',
             '//*[contains(@class,"chapter-content")]',
             '//*[@id="chapter-content"]',
-            '//*[contains(@class,"novel-content")]',
         ];
 
         $contentNodes = $xpath->query(implode('|', $queries));

@@ -8,14 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('scraped_chapters', function (Blueprint $table) {
+        Schema::create('dtruyen_chapters', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('story_id');
+            $table->unsignedBigInteger('story_id')->comment('FK → dtruyen_stories.id');
             $table->integer('order_index')->default(0);
             $table->string('chapter_title')->nullable();
             $table->string('chapter_url')->unique();
-            $table->string('content_path')->nullable(); // Đường dẫn file lưu nội dung
-            $table->string('status')->default('pending'); // pending/processing/completed/failed
+            $table->string('content_path')->nullable()->comment('Đường dẫn tương đối file txt trên disk');
+            $table->enum('status', ['pending', 'processing', 'completed', 'failed'])->default('pending');
             $table->text('last_error')->nullable();
             $table->timestamps();
 
@@ -26,6 +26,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('scraped_chapters');
+        Schema::dropIfExists('dtruyen_chapters');
     }
 };
