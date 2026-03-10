@@ -123,4 +123,7 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    'backend_api_url'   => env('BACKEND_API_URL'),
+    'backend_api_token' => env('BACKEND_API_TOKEN'),
+
 ];

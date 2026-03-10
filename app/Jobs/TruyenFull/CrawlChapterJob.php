@@ -61,8 +61,6 @@ class CrawlChapterJob implements ShouldQueue
 
             // Sleep dài hơn khi lỗi để hạ nhiệt tránh bị block thêm
             sleep(rand(60, 90));
-
-            throw $e;
         }
     }
 

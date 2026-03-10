@@ -69,7 +69,7 @@ class SyncToBackendCommand extends Command
                 'slug'        => $story->slug,
                 'author'      => $story->author,
                 'description' => '', // Hiện tại crawler chưa lấy
-                'cover_image' => null, // Hiện tại crawler chưa lấy
+                'cover_image' => $story->cover_image, // Path của ảnh đã download
                 'status'      => 0, // 0 = Đang ra
             ];
 
@@ -168,7 +168,7 @@ class SyncToBackendCommand extends Command
         }
 
         // Cố gắng tìm số sau chữ "Chương"
-        preg_match('/(?:Chương|Quyển|Thiên)[\s\:]*([0-9]+)/iu', $title, $matches);
+        preg_match('/(?:Chương|Quyển|Thiên)[\s:]*([0-9]+)/iu', $title, $matches);
         if (isset($matches[1])) {
             return (int) $matches[1];
         }

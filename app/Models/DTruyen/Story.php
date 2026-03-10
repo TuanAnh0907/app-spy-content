@@ -35,6 +35,7 @@ class Story extends Model
         'title',
         'author',
         'slug',
+        'cover_image',
         'normalized_title',
         'normalized_author',
         'total_chapters',
