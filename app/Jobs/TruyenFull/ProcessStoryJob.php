@@ -4,6 +4,8 @@ namespace App\Jobs\TruyenFull;
 
 use App\Models\TruyenFull\Chapter;
 use App\Models\TruyenFull\Story;
+use App\Enums\StoryStatus;
+use App\Services\StoryDeduplicationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -36,7 +38,7 @@ class ProcessStoryJob implements ShouldQueue
      */
     public function handle(): void
     {
-        $this->story->update(['status' => 'processing']);
+        $this->story->update(['status' => StoryStatus::PROCESSING]);
 
         try {
             $html = $this->fetchHtml($this->story->url);
@@ -45,6 +47,26 @@ class ProcessStoryJob implements ShouldQueue
             $xpath = new DOMXPath($dom);
 
             $slug = $this->extractAndSaveStoryInfo($xpath);
+
+            // ── Dedup check (bậc 1): so normalized title + author với DTruyen ──
+            $dedup  = new StoryDeduplicationService();
+            $result = $dedup->checkDuplicate(
+                $this->story->normalized_title ?? '',
+                $this->story->normalized_author ?? '',
+                'truyenfull'
+            );
+
+            if ($result['duplicate']) {
+                $reason = "Duplicate of {$result['source']}#{$result['id']} ({$result['title']})";
+                $this->story->update([
+                    'status'         => StoryStatus::SKIPPED,
+                    'skipped_reason' => $reason,
+                ]);
+                Log::info("[TruyenFull][ProcessStoryJob] Skip '{$this->story->title}' — {$reason}");
+                return;
+            }
+            // ────────────────────────────────────────────────────────────────────
+
             $this->ensureStorageDirectoryExists($slug);
 
             $maxPage = $this->determineMaxPage($xpath);
@@ -55,7 +77,7 @@ class ProcessStoryJob implements ShouldQueue
             if ($maxPage === 1) {
                 $totalCount = Chapter::query()->where('story_id', $this->story->id)->count();
                 $this->story->update([
-                    'status'         => 'completed',
+                    'status'         => StoryStatus::COMPLETED,
                     'total_chapters' => $totalCount,
                     'last_error'     => null,
                 ]);
@@ -65,7 +87,7 @@ class ProcessStoryJob implements ShouldQueue
 
         } catch (Exception $e) {
             Log::error("[TruyenFull][ProcessStoryJob] Lỗi: " . $e->getMessage());
-            $this->story->update(['status' => 'failed', 'last_error' => $e->getMessage()]);
+            $this->story->update(['status' => StoryStatus::FAILED, 'last_error' => $e->getMessage()]);
             throw $e;
         }
     }
@@ -105,10 +127,14 @@ class ProcessStoryJob implements ShouldQueue
         $author = $authorNodes->length > 0 ? trim($authorNodes->item(0)->textContent) : 'Không rõ';
         $slug   = basename(rtrim($this->story->url, '/'));
 
+        $dedup = new StoryDeduplicationService();
+
         $this->story->update([
-            'title'  => $title,
-            'author' => $author,
-            'slug'   => $slug,
+            'title'             => $title,
+            'author'            => $author,
+            'slug'              => $slug,
+            'normalized_title'  => $dedup->normalize($title),
+            'normalized_author' => $dedup->normalize($author),
         ]);
 
         return $slug;

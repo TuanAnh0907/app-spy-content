@@ -2,6 +2,7 @@
 
 namespace App\Models\TruyenFull;
 
+use App\Enums\StoryStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
@@ -29,12 +30,16 @@ class Story extends Model
         'title',
         'author',
         'slug',
+        'normalized_title',
+        'normalized_author',
         'status',
         'total_chapters',
         'last_error',
+        'skipped_reason',
     ];
 
     protected $casts = [
+        'status'         => StoryStatus::class,
         'total_chapters' => 'integer',
         'created_at'     => 'datetime',
         'updated_at'     => 'datetime',

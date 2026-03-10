@@ -3,6 +3,7 @@
 namespace App\Models\DTruyen;
 
 use App\Enums\DtruyenStoryType;
+use App\Enums\StoryStatus;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -34,12 +35,16 @@ class Story extends Model
         'title',
         'author',
         'slug',
+        'normalized_title',
+        'normalized_author',
         'total_chapters',
         'last_error',
+        'skipped_reason',
     ];
 
     protected $casts = [
         'type'           => DtruyenStoryType::class,
+        'status'         => StoryStatus::class,
         'total_chapters' => 'integer',
         'created_at'     => 'datetime',
         'updated_at'     => 'datetime',

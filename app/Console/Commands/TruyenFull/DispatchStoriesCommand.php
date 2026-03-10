@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands\TruyenFull;
 
+use App\Enums\StoryStatus;
 use App\Jobs\TruyenFull\ProcessStoryJob;
 use App\Models\TruyenFull\Story;
 use Illuminate\Console\Command;
@@ -19,7 +20,7 @@ class DispatchStoriesCommand extends Command
         $limit = (int) $this->option('limit');
 
         $stories = Story::query()
-            ->where('status', 'pending')
+            ->where('status', StoryStatus::PENDING)
             ->orderBy('id')
             ->limit($limit)
             ->get();
@@ -35,7 +36,7 @@ class DispatchStoriesCommand extends Command
         $bar->start();
 
         foreach ($stories as $story) {
-            $story->update(['status' => 'processing']);
+            $story->update(['status' => StoryStatus::PROCESSING]);
             ProcessStoryJob::dispatch($story)->onQueue('tf-stories');
             $bar->advance();
         }
