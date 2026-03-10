@@ -17,7 +17,9 @@
         "spatie/browsershot": "^5.2",
         "spatie/crawler": "^8.5",
         "symfony/css-selector": "^7.4",
-        "symfony/dom-crawler": "^7.4"
+        "symfony/dom-crawler": "^7.4",
+        "ext-libxml": "*",
+        "ext-dom": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

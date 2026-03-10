@@ -18,21 +18,19 @@ class CrawlChapterPageJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 3;
+    public int $tries   = 3;
     public int $timeout = 120;
 
-    public function __construct(
-        public DtruyenStory $story,
-        public string $pageUrl,
-        public int $startIndex,
-    ) {}
+    public function __construct(public DtruyenStory $story, public string $pageUrl)
+    {
+    }
 
     public function handle(): void
     {
         $scraperPath = '/var/www/read-app/spy-doctruyen/scraper.cjs';
         $storyJob    = new ProcessDtruyenStoryJob($this->story);
 
-        $html = shell_exec("cd /var/www/read-app/spy-doctruyen && node {$scraperPath} " . escapeshellarg($this->pageUrl));
+        $html = shell_exec("cd /var/www/read-app/spy-doctruyen && node {$scraperPath} ".escapeshellarg($this->pageUrl));
 
         if (!$html || strlen(trim($html)) < 200) {
             Log::warning("[CrawlChapterPageJob] HTML rỗng: {$this->pageUrl}");
@@ -45,7 +43,7 @@ class CrawlChapterPageJob implements ShouldQueue
         libxml_clear_errors();
         $xpath = new \DOMXPath($dom);
 
-        $storyJob->extractAndSaveChapters($xpath, $this->story->id, $this->startIndex);
+        $storyJob->extractAndSaveChapters($xpath, $this->story->id);
 
         Log::info("[CrawlChapterPageJob] Đã crawl trang chương: {$this->pageUrl}");
     }

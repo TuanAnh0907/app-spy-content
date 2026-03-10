@@ -9,13 +9,15 @@ use Illuminate\Console\Command;
 class DispatchStoryJobsCommand extends Command
 {
     protected $signature = 'crawl:dispatch-stories {--limit=100 : Số truyện mỗi lần dispatch}';
+
     protected $description = 'Dispatch ProcessDtruyenStoryJob cho các truyện đang pending trong bảng dtruyen_stories (Thread 2)';
 
     public function handle(): void
     {
         $limit = (int) $this->option('limit');
 
-        $stories = DtruyenStory::where('status', 'pending')
+        $stories = DtruyenStory::query()
+            ->where('status', 'pending')
             ->orderBy('id')
             ->limit($limit)
             ->get();
@@ -31,6 +33,7 @@ class DispatchStoryJobsCommand extends Command
         $bar->start();
 
         foreach ($stories as $story) {
+            $story->update(['status' => 'processing']);
             ProcessDtruyenStoryJob::dispatch($story)->onQueue('stories');
             $bar->advance();
         }

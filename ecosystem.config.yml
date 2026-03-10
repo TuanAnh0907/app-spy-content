@@ -46,7 +46,7 @@ apps:
   - name: crawler-thread2-worker
     script: artisan
     interpreter: php
-    args: "queue:work --queue=stories,chapters --timeout=300 --sleep=20 --tries=3"
+    args: "queue:work --queue=chapters,stories --timeout=300 --sleep=30 --tries=3"
     cwd: /var/www/read-app/spy-doctruyen
     autorestart: true
     watch: false
