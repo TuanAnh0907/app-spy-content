@@ -113,7 +113,7 @@ class CrawlChapterJob implements ShouldQueue
         $story = $this->chapter->story;
         $slug  = $story->slug ?? basename(rtrim($story->url, '/'));
 
-        $disk = Storage::disk(config('filesystems.chapter_disk', 'chapters'));
+        $disk = Storage::disk(config('filesystems.chapter_disk'));
 
         if (!$disk->exists($slug)) {
             $disk->makeDirectory($slug);

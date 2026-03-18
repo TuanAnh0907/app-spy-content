@@ -121,8 +121,21 @@ CRAWLER_RETRIES=3             # Số lần retry khi lỗi
 CRAWLER_STALE_MINUTES=60      # Sau bao lâu coi processing là crashed
 
 # Lưu file content chương
-CHAPTER_DISK=chapters                           # Disk Laravel
-CHAPTER_STORAGE_PATH=/path/to/storage/chapters  # Thư mục lưu file
+# CHAPTER_DISK: chapters (local) | chapters_s3 (S3/MinIO)
+CHAPTER_DISK=chapters
+
+# Dùng khi CHAPTER_DISK=chapters
+CHAPTER_STORAGE_PATH=/path/to/storage/chapters
+
+# Dùng khi CHAPTER_DISK=chapters_s3 (nếu bỏ trống sẽ fallback về AWS_*)
+CHAPTER_S3_KEY=
+CHAPTER_S3_SECRET=
+CHAPTER_S3_REGION=us-east-1
+CHAPTER_S3_BUCKET=
+CHAPTER_S3_URL=
+CHAPTER_S3_ENDPOINT=
+CHAPTER_S3_PATH_STYLE=false
+CHAPTER_S3_VISIBILITY=private
 
 # Backend để sync
 BACKEND_API_URL=http://localhost:8000

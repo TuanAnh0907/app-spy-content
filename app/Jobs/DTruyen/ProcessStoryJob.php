@@ -147,7 +147,7 @@ class ProcessStoryJob implements ShouldQueue
 
     protected function ensureStorageDirectoryExists(string $slug): void
     {
-        $disk = Storage::disk(config('filesystems.chapter_disk', 'chapters'));
+        $disk = Storage::disk(config('filesystems.chapter_disk'));
 
         if (!$disk->exists($slug)) {
             $disk->makeDirectory($slug);

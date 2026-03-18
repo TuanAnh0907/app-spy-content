@@ -16,7 +16,7 @@ return [
     'default'      => env('FILESYSTEM_DISK', 'local'),
 
     // Disk dùng để lưu nội dung chương (chapter content files)
-    'chapter_disk' => env('CHAPTER_DISK', 'local'),
+    'chapter_disk' => env('CHAPTER_DISK', 'chapters'),
 
     /*
     |--------------------------------------------------------------------------
@@ -56,6 +56,22 @@ return [
             'root'   => env('CHAPTER_STORAGE_PATH', storage_path('app/chapters')),
             'throw'  => false,
             'report' => false,
+        ],
+
+        // Disk S3 chuyên dụng để lưu nội dung chương (tuỳ chọn thay cho 'chapters' local)
+        'chapters_s3' => [
+            'driver'                  => 's3',
+            // Nếu CHAPTER_S3_* không có, fallback về AWS_* hiện có
+            'key'                     => env('CHAPTER_S3_KEY', env('AWS_ACCESS_KEY_ID')),
+            'secret'                  => env('CHAPTER_S3_SECRET', env('AWS_SECRET_ACCESS_KEY')),
+            'region'                  => env('CHAPTER_S3_REGION', env('AWS_DEFAULT_REGION')),
+            'bucket'                  => env('CHAPTER_S3_BUCKET', env('AWS_BUCKET')),
+            'url'                     => env('CHAPTER_S3_URL', env('AWS_URL')),
+            'endpoint'                => env('CHAPTER_S3_ENDPOINT', env('AWS_ENDPOINT')),
+            'use_path_style_endpoint' => env('CHAPTER_S3_PATH_STYLE', env('AWS_USE_PATH_STYLE_ENDPOINT', false)),
+            'visibility'              => env('CHAPTER_S3_VISIBILITY', 'private'),
+            'throw'                   => false,
+            'report'                  => false,
         ],
 
         's3' => [
