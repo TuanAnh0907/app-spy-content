@@ -1,0 +1,36 @@
+apps:
+  # =====================================================
+  # [System] Đồng bộ dữ liệu sang Backend 
+  # Tự động chạy mỗi 5 phút
+  # =====================================================
+  - name: system-sync-backend
+    script: artisan
+    interpreter: php
+    args: "sync:backend --limit=100"
+    cwd: /var/www/read-app/spy-doctruyen
+    autorestart: false
+    cron_restart: "*/5 * * * *"
+    watch: false
+    log_date_format: "YYYY-MM-DD HH:mm:ss"
+    out_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-sync-backend-out.log
+    error_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-sync-backend-err.log
+    env:
+      APP_ENV: production
+
+  # =====================================================
+  # [System] Quét lại truyện cũ (Re-crawl ongoing) 
+  # Tự động chạy vào 2h sáng mỗi ngày
+  # =====================================================
+  - name: system-recheck-ongoing
+    script: artisan
+    interpreter: php
+    args: "crawl:recheck-ongoing --days=2"
+    cwd: /var/www/read-app/spy-doctruyen
+    autorestart: false
+    cron_restart: "0 2 * * *"
+    watch: false
+    log_date_format: "YYYY-MM-DD HH:mm:ss"
+    out_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-recheck-ongoing-out.log
+    error_file: /var/www/read-app/spy-doctruyen/storage/logs/pm2-recheck-ongoing-err.log
+    env:
+      APP_ENV: production
