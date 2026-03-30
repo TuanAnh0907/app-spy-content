@@ -46,6 +46,11 @@ class CrawlChapterJob implements ShouldQueue
                 'last_error' => null,
             ]);
 
+            // Reset retry count on success
+            if ($this->chapter->story->crawl_retry_count > 0) {
+                $this->chapter->story->update(['crawl_retry_count' => 0]);
+            }
+
             // Sleep 30-60s để tránh bị block IP
             sleep(rand(30, 60));
 
@@ -61,6 +66,36 @@ class CrawlChapterJob implements ShouldQueue
 
             // Sleep dài hơn khi lỗi để hạ nhiệt tránh bị block thêm
             sleep(rand(60, 90));
+
+            throw $e;
+        }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $story = $this->chapter->story;
+        if (!$story || !$story->is_ongoing) {
+            return;
+        }
+
+        if (str_contains($exception->getMessage(), 'Không tìm thấy nội dung')) {
+            $story->increment('crawl_retry_count');
+            if ($story->crawl_retry_count >= 4) {
+                $story->update([
+                    'is_ongoing' => false,
+                ]);
+                Log::channel('truyenfull')->info("[TruyenFull] Truyện {$story->title} quá 4 tuần không có chương mới. Ngừng theo dõi.");
+            } else {
+                $story->update([
+                    'next_crawl_at' => now()->addDays(7),
+                ]);
+                Log::channel('truyenfull')->info("[TruyenFull] Truyện {$story->title} chưa có chương mới. Thử lại sau 7 ngày.");
+            }
+        } else {
+            // Lỗi mạng hoặc block Cloudflare, thử lại nhanh hơn
+            $story->update([
+                'next_crawl_at' => now()->addHours(1),
+            ]);
         }
     }
 

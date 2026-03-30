@@ -18,6 +18,9 @@ use Illuminate\Support\Carbon;
  * @property string|null $slug
  * @property int $total_chapters
  * @property string|null $last_error
+ * @property bool $is_ongoing
+ * @property int $crawl_retry_count
+ * @property Carbon|null $next_crawl_at
  * @property DtruyenStoryType|string $type
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -41,14 +44,20 @@ class Story extends Model
         'total_chapters',
         'last_error',
         'skipped_reason',
+        'is_ongoing',
+        'crawl_retry_count',
+        'next_crawl_at',
     ];
 
     protected $casts = [
-        'type'           => DtruyenStoryType::class,
-        'status'         => StoryStatus::class,
-        'total_chapters' => 'integer',
-        'created_at'     => 'datetime',
-        'updated_at'     => 'datetime',
+        'type'              => DtruyenStoryType::class,
+        'status'            => StoryStatus::class,
+        'total_chapters'    => 'integer',
+        'is_ongoing'        => 'boolean',
+        'crawl_retry_count' => 'integer',
+        'next_crawl_at'     => 'datetime',
+        'created_at'        => 'datetime',
+        'updated_at'        => 'datetime',
     ];
 
     public function chapters(): HasMany

@@ -18,6 +18,9 @@ return [
     // Disk dùng để lưu nội dung chương (chapter content files)
     'chapter_disk' => env('CHAPTER_DISK', 'chapters'),
 
+    // Disk dùng để lưu ảnh cover
+    'cover_disk'   => env('COVER_DISK', 'covers'),
+
     /*
     |--------------------------------------------------------------------------
     | Filesystem Disks
@@ -70,6 +73,29 @@ return [
             'endpoint'                => env('CHAPTER_S3_ENDPOINT', env('AWS_ENDPOINT')),
             'use_path_style_endpoint' => env('CHAPTER_S3_PATH_STYLE', env('AWS_USE_PATH_STYLE_ENDPOINT', false)),
             'visibility'              => env('CHAPTER_S3_VISIBILITY', 'private'),
+            'throw'                   => false,
+            'report'                  => false,
+        ],
+
+        // Disk riêng để lưu ảnh cover
+        'covers' => [
+            'driver' => 'local',
+            'root'   => env('COVER_STORAGE_PATH', storage_path('app/covers')),
+            'throw'  => false,
+            'report' => false,
+        ],
+
+        // Disk S3 chuyên dụng để lưu ảnh cover (tuỳ chọn thay cho 'covers' local)
+        'covers_s3' => [
+            'driver'                  => 's3',
+            'key'                     => env('COVER_S3_KEY', env('AWS_ACCESS_KEY_ID')),
+            'secret'                  => env('COVER_S3_SECRET', env('AWS_SECRET_ACCESS_KEY')),
+            'region'                  => env('COVER_S3_REGION', env('AWS_DEFAULT_REGION')),
+            'bucket'                  => env('COVER_S3_BUCKET', env('AWS_BUCKET')),
+            'url'                     => env('COVER_S3_URL', env('AWS_URL')),
+            'endpoint'                => env('COVER_S3_ENDPOINT', env('AWS_ENDPOINT')),
+            'use_path_style_endpoint' => env('COVER_S3_PATH_STYLE', env('AWS_USE_PATH_STYLE_ENDPOINT', false)),
+            'visibility'              => env('COVER_S3_VISIBILITY', 'public'),
             'throw'                   => false,
             'report'                  => false,
         ],

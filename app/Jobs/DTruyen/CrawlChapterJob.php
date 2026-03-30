@@ -3,6 +3,7 @@
 namespace App\Jobs\DTruyen;
 
 use App\Models\DTruyen\Chapter;
+use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -20,7 +21,7 @@ use DOMXPath;
  */
 class CrawlChapterJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries   = 3;
     public int $timeout = 90;
@@ -46,6 +47,11 @@ class CrawlChapterJob implements ShouldQueue
                 'last_error' => null,
             ]);
 
+            // Reset retry count on success
+            if ($this->chapter->story->crawl_retry_count > 0) {
+                $this->chapter->story->update(['crawl_retry_count' => 0]);
+            }
+
             // Sleep 30-60s sau khi cào xong để tránh bị block IP
             sleep(rand(30, 60));
 
@@ -61,6 +67,36 @@ class CrawlChapterJob implements ShouldQueue
 
             // Bắt buộc sleep kể cả khi bị lỗi/chặn để hạ nhiệt, tránh block IP nặng hơn
             sleep(rand(60, 90));
+
+            throw $e;
+        }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $story = $this->chapter->story;
+        if (!$story || !$story->is_ongoing) {
+            return;
+        }
+
+        if (str_contains($exception->getMessage(), 'Không tìm thấy nội dung')) {
+            $story->increment('crawl_retry_count');
+            if ($story->crawl_retry_count >= 4) {
+                $story->update([
+                    'is_ongoing' => false,
+                ]);
+                Log::channel('dtruyen')->info("[DTruyen] Truyện {$story->title} quá 4 tuần không có chương mới. Ngừng theo dõi.");
+            } else {
+                $story->update([
+                    'next_crawl_at' => now()->addDays(7),
+                ]);
+                Log::channel('dtruyen')->info("[DTruyen] Truyện {$story->title} chưa có chương mới. Thử lại sau 7 ngày.");
+            }
+        } else {
+            // Lỗi mạng hoặc block Cloudflare, thử lại nhanh hơn
+            $story->update([
+                'next_crawl_at' => now()->addHours(1),
+            ]);
         }
     }
 
@@ -73,7 +109,7 @@ class CrawlChapterJob implements ShouldQueue
         $html        = shell_exec("cd " . escapeshellarg(base_path()) . " && node " . escapeshellarg($scraperPath) . " " . escapeshellarg($url));
 
         if (!$html || strlen(trim($html)) < 200) {
-            throw new Exception("HTML rỗng hoặc Cloudflare block khi cào chương: {$url}");
+            throw new Exception("HTML rỗng hoặc Cloudflare block khi cào chương: $url");
         }
 
         return $html;
@@ -96,6 +132,8 @@ class CrawlChapterJob implements ShouldQueue
             '//*[contains(@class,"chapter-content")]',
             '//*[@id="chapter-content"]',
             '//*[contains(@class,"novel-content")]',
+            '//*[@itemprop="articleBody"]',
+            '//div[@class="content"]',
         ];
 
         $contentNodes = $xpath->query(implode('|', $queries));
@@ -120,10 +158,10 @@ class CrawlChapterJob implements ShouldQueue
         }
 
         $chapterTitle = $this->chapter->chapter_title ?? "Chương " . $this->chapter->order_index;
-        $relativePath = "{$slug}/chapter_{$this->chapter->order_index}.txt";
-        $fullRelPath  = "{$slug}/full_story.txt";
+        $relativePath = "$slug/chapter_{$this->chapter->order_index}.txt";
+        $fullRelPath  = "$slug/full_story.txt";
 
-        $fileContent = "=== {$chapterTitle} ===\n\n" . trim($content) . "\n";
+        $fileContent = "=== $chapterTitle ===\n\n" . trim($content) . "\n";
 
         $disk->put($relativePath, $fileContent);
         $disk->append($fullRelPath, $fileContent);

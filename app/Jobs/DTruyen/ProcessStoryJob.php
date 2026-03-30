@@ -63,7 +63,7 @@ class ProcessStoryJob implements ShouldQueue
                     'status'         => StoryStatus::SKIPPED,
                     'skipped_reason' => $reason,
                 ]);
-                Log::channel('dtruyen')->info("[DTruyen][ProcessStoryJob] Skip '{$this->story->title}' — {$reason}");
+                Log::channel('dtruyen')->info("[DTruyen][ProcessStoryJob] Skip '{$this->story->title}' — $reason");
                 return;
             }
             // ────────────────────────────────────────────────────────────────────
@@ -76,20 +76,11 @@ class ProcessStoryJob implements ShouldQueue
                 $this->story->update(['cover_image' => $coverImage]);
             }
 
-            $maxPage = $this->determineMaxPage($xpath);
+            $this->determineMaxPage($xpath);
 
-            $this->extractAndSaveChapters($xpath, $this->story->id);
-            $this->dispatchSubsequentPages($maxPage);
-
-            if ($maxPage === 1) {
-                $totalCount = Chapter::query()
-                    ->where('story_id', $this->story->id)
-                    ->count();
-
-                $this->story->update(['status' => StoryStatus::COMPLETED, 'total_chapters' => $totalCount]);
-            }
-
-            Log::channel('dtruyen')->info("[DTruyen][ProcessStoryJob] '{$this->story->title}' -> {$maxPage} trang chương, dispatch thêm " . ($maxPage - 1) . " Job trang.");
+            // Chỉ lưu thông tin chương vào DB, không dispatch lẻ CrawlChapterJob ở đây nữa
+            $this->extractAndSaveChaptersInDb($xpath, $this->story->id);
+            $this->dispatchSubsequentPages();
 
         } catch (Exception $e) {
             Log::channel('dtruyen')->error("[DTruyen][ProcessStoryJob] Lỗi: " . $e->getMessage());
@@ -103,7 +94,6 @@ class ProcessStoryJob implements ShouldQueue
     protected function fetchHtml(string $url): string
     {
         $scraperPath = base_path('scraper.cjs');
-        $html        = '';
         $maxRetries  = 2;
 
         for ($i = 0; $i <= $maxRetries; $i++) {
@@ -115,12 +105,12 @@ class ProcessStoryJob implements ShouldQueue
             }
 
             if ($i < $maxRetries) {
-                Log::channel('dtruyen')->warning("[DTruyen][fetchHtml] Lần thử " . ($i+1) . " thất bại cho URL: {$url}. Đang thử lại sau 10s...");
+                Log::channel('dtruyen')->warning("[DTruyen][fetchHtml] Lần thử " . ($i+1) . " thất bại cho URL: $url. Đang thử lại sau 10s...");
                 sleep(10);
             }
         }
 
-        throw new Exception("HTML rỗng hoặc bị block sau {$maxRetries} lần thử: {$url}");
+        throw new Exception("HTML rỗng hoặc bị block sau $maxRetries lần thử: $url");
     }
 
     protected function extractAndSaveStoryInfo(DOMXPath $xpath): string
@@ -132,6 +122,16 @@ class ProcessStoryJob implements ShouldQueue
         $author = $authorNodes->length > 0 ? trim($authorNodes->item(0)->textContent) : 'Không rõ';
         $slug   = basename(rtrim($this->story->url, '/'));
 
+        // Parse status to determine if the story is ongoing
+        $isOngoing = true;
+        $infoNodes = $xpath->query('//*[contains(@class, "info")] | //*[contains(@class, "truyen-info")] | //*[contains(@class, "story-info")]');
+        if ($infoNodes->length > 0) {
+            $infoText = strtolower($infoNodes->item(0)->textContent ?? '');
+            if (str_contains($infoText, 'hoàn thành') || str_contains($infoText, 'full')) {
+                $isOngoing = false;
+            }
+        }
+
         $dedup = new StoryDeduplicationService();
 
         $this->story->update([
@@ -140,6 +140,8 @@ class ProcessStoryJob implements ShouldQueue
             'slug'              => $slug,
             'normalized_title'  => $dedup->normalize($title),
             'normalized_author' => $dedup->normalize($author),
+            'is_ongoing'        => $isOngoing,
+            'crawl_retry_count' => 0, // Reset when first processed
         ]);
 
         return $slug;
@@ -168,17 +170,16 @@ class ProcessStoryJob implements ShouldQueue
         return $maxPage;
     }
 
-    protected function dispatchSubsequentPages(int $maxPage): void
+    /**
+     * @return void
+     */
+    protected function dispatchSubsequentPages(): void
     {
-        for ($page = 2; $page <= $maxPage; $page++) {
-            $pageUrl = rtrim($this->story->url, '/') . "/trang-{$page}/#chapter-list";
-            CrawlChapterPageJob::dispatch($this->story, $pageUrl)
-                ->onQueue('stories')
-                ->delay(now()->addSeconds(($page - 1) * 30));
-        }
+        // Thay vì dispatch các trang chương, ta chuyển sang dùng Batching từ chương 1
+        CrawlStoryChapterBatchJob::dispatch($this->story)->onQueue('chapters');
     }
 
-    public function extractAndSaveChapters(DOMXPath $xpath, int $storyId): void
+    public function extractAndSaveChaptersInDb(DOMXPath $xpath, int $storyId): void
     {
         $chapterLinks = $xpath->query('//*[contains(@class, "list-chapter")]//a|//*[contains(@class, "l-chapter")]//a|//*[@id="chapter-list"]//a');
 
@@ -200,7 +201,7 @@ class ProcessStoryJob implements ShouldQueue
                 $orderIndex = (int) $m[1];
             }
 
-            $chapter = Chapter::firstOrCreate(
+            Chapter::firstOrCreate(
                 ['chapter_url' => $chapterUrl],
                 [
                     'story_id'      => $storyId,
@@ -209,10 +210,6 @@ class ProcessStoryJob implements ShouldQueue
                     'status'        => 'pending',
                 ]
             );
-
-            if ($chapter->wasRecentlyCreated || $chapter->status !== 'completed') {
-                CrawlChapterJob::dispatch($chapter)->onQueue('chapters');
-            }
         }
     }
 
@@ -224,6 +221,8 @@ class ProcessStoryJob implements ShouldQueue
         try {
             // Tìm ảnh cover (ưu tiên meta og:image, sau đó đến các container phổ biến)
             $imgNodes = $xpath->query('
+                //*[@id="truyen"]/div[1]/div[1]/div[2]/div[1]/div/img/@src |
+                //img[@itemprop="image"]/@src |
                 //meta[@property="og:image"]/@content |
                 //*[@id="book-img"]//img/@src |
                 //div[contains(@class, "book-img")]//img/@src |
@@ -252,7 +251,7 @@ class ProcessStoryJob implements ShouldQueue
             $response = Http::timeout(30)->get($imgUrl);
 
             if (!$response->successful()) {
-                Log::channel('dtruyen')->warning("[DTruyen][ProcessStoryJob] Không thể download ảnh: {$imgUrl}");
+                Log::channel('dtruyen')->warning("[DTruyen][ProcessStoryJob] Không thể download ảnh: $imgUrl");
                 return null;
             }
 
@@ -262,13 +261,13 @@ class ProcessStoryJob implements ShouldQueue
                 $extension = strtolower($matches[1]);
             }
 
-            // Lưu vào storage/app/private/covers/{slug}/cover.{ext}
-            $coverPath = "covers/{$slug}/cover.{$extension}";
-            $disk = Storage::disk('local');
+            // Lưu vào disk được cấu hình (local hoặc s3)
+            $coverPath = "$slug/cover.$extension";
+            $disk = Storage::disk(config('filesystems.cover_disk'));
 
             $disk->put($coverPath, $response->body());
 
-            Log::channel('dtruyen')->info("[DTruyen][ProcessStoryJob] Đã download cover: {$coverPath}");
+            Log::channel('dtruyen')->info("[DTruyen][ProcessStoryJob] Đã download cover: $coverPath");
 
             return $coverPath;
 
