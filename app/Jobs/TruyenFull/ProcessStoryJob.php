@@ -7,6 +7,7 @@ use App\Models\TruyenFull\Chapter;
 use App\Models\TruyenFull\Story;
 use App\Services\StoryDeduplicationService;
 use DOMDocument;
+use DOMElement;
 use DOMXPath;
 use Exception;
 use Illuminate\Bus\Queueable;
@@ -78,7 +79,7 @@ class ProcessStoryJob implements ShouldQueue
 
             // Chỉ lưu thông tin chương vào DB (trang 1) rồi khởi chạy batch
             $this->extractAndSaveChaptersInDb($xpath, $this->story->id);
-            
+
             CrawlStoryChapterBatchJob::dispatch($this->story)->onQueue('tf-chapters');
 
         } catch (Exception $e) {
@@ -126,7 +127,8 @@ class ProcessStoryJob implements ShouldQueue
         $infoNodes = $xpath->query('//*[contains(@class, "info")] | //*[contains(@class, "truyen-info")] | //*[contains(@class, "story-info")]');
         if ($infoNodes->length > 0) {
             $infoText = strtolower($infoNodes->item(0)->textContent ?? '');
-            if (str_contains($infoText, 'hoàn thành') || str_contains($infoText, 'full') || str_contains($infoText, 'đã hoàn thành')) {
+            if (str_contains($infoText, 'hoàn thành') || str_contains($infoText, 'full') || str_contains($infoText,
+                    'đã hoàn thành')) {
                 $isOngoing = false;
             }
         }
@@ -159,8 +161,6 @@ class ProcessStoryJob implements ShouldQueue
         }
     }
 
-
-
     public function extractAndSaveChaptersInDb(DOMXPath $xpath, int $storyId): void
     {
         // TruyenFull: list chương nằm trong các thẻ <li> của .list-chapter
@@ -169,7 +169,11 @@ class ProcessStoryJob implements ShouldQueue
         Log::channel('truyenfull')->info("[TruyenFull][ProcessStoryJob] Debug Chapters: found ".$chapterLinks->length." links.");
 
         foreach ($chapterLinks as $link) {
-            $href = (string) $link->getAttribute('href');
+            if (!$link instanceof DOMElement) {
+                continue;
+            }
+
+            $href = $link->getAttribute('href');
 
             // Bỏ qua link không phải chương (như link trang, link quảng cáo...)
             if (!str_contains($href, 'chuong') && !str_contains($href, 'chapter')) {
